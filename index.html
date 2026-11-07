@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trainer Potenzgesetze</title>
+<style>
+:root{
+  --card:#fff; --text:#172033; --muted:#64748b; --accent:#2563eb;
+  --good:#15803d; --bad:#b91c1c; --line:#dbe3ef; --soft:#f8fafc;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  background:linear-gradient(135deg,#eef4ff,#f8fbff); color:var(--text);
+  min-height:100vh; padding:24px;
+}
+.app{width:min(880px,100%);margin:0 auto}
+h1{font-size:clamp(1.7rem,4vw,2.5rem);margin:0 0 6px}
+.subtitle{color:var(--muted);margin-bottom:18px}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:22px;
+  box-shadow:0 14px 38px rgba(15,23,42,.08); padding:clamp(20px,5vw,36px)
+}
+.mode-picker{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:22px
+}
+.mode-btn{
+  border:2px solid var(--line); border-radius:16px; padding:18px;
+  background:var(--soft); cursor:pointer; text-align:left; min-height:96px
+}
+.mode-btn.active{border-color:var(--accent); background:#eef4ff}
+.mode-btn b{display:block;font-size:1.05rem;margin-bottom:4px}
+.mode-btn span{color:var(--muted);font-size:.93rem}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
+select,button,input{font:inherit;border-radius:12px;border:1px solid var(--line)}
+select{padding:10px 12px;background:white}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+.stat{padding:12px;background:var(--soft);border:1px solid var(--line);border-radius:14px;text-align:center}
+.stat b{display:block;font-size:1.25rem}
+.label,.task-label{color:var(--muted);font-size:.9rem}
+.task-label{text-align:center;margin-bottom:8px}
+.task{
+  text-align:center;font-size:clamp(2rem,7vw,4rem);font-weight:750;
+  margin:12px 0 20px;line-height:1.3
+}
+.task > span{display:inline-block}
+sup{font-size:.55em}
+.answer-row{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px}
+#answer{
+  width:190px;min-height:62px;text-align:center;padding:14px 12px;
+  font-size:1.65rem;font-weight:700;background:white
+}
+button{
+  padding:14px 20px;min-height:58px;cursor:pointer;font-weight:700;background:white;
+  touch-action:manipulation
+}
+.primary{background:var(--accent);color:white;border-color:var(--accent)}
+.secondary{background:var(--soft)}
+#feedback{min-height:58px;margin-top:18px;text-align:center;font-size:1.05rem;font-weight:650}
+.good{color:var(--good)} .bad{color:var(--bad)}
+.keypad{
+  width:min(360px,100%);margin:16px auto 0;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:9px
+}
+.keypad button{
+  min-height:58px;padding:10px;font-size:1.35rem;background:var(--soft);
+  border:1px solid var(--line)
+}
+.footer{margin-top:14px;text-align:center;color:var(--muted);font-size:.92rem}
+.hidden{display:none!important}
+.root-answer{display:flex;justify-content:center;align-items:center;min-height:76px;font-size:2.15rem;font-weight:700}
+.root-wrap{display:inline-flex;align-items:flex-start;position:relative;margin:0 6px;padding-top:8px}
+.root-index-input{width:34px!important;height:34px!important;min-height:34px!important;padding:2px!important;font-size:1.05rem!important;text-align:center;position:relative;top:-12px;margin-right:-7px;z-index:2;background:#fff;border:1.5px solid var(--line);border-radius:8px}
+.root-symbol{font-family:Georgia,"Times New Roman",serif;font-size:3.15rem;line-height:.92;font-weight:400;transform:scaleX(1.08);transform-origin:right center;margin-right:-7px;position:relative;z-index:2}
+.radicand{display:inline-flex;align-items:flex-start;border-top:4px solid currentColor;padding:5px 8px 0 8px;min-width:82px;margin-top:0;position:relative;z-index:1}
+.x-symbol{font-family:Georgia,"Times New Roman",serif;font-size:2.35rem;line-height:.92;font-style:italic}
+.x-exp-input{width:34px!important;height:34px!important;min-height:34px!important;padding:2px!important;font-size:1.05rem!important;text-align:center;margin-left:2px;position:relative;top:-12px;background:#fff;border:1.5px solid var(--line);border-radius:8px}
+.recip-frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle}
+.recip-frac .num{border-bottom:2px solid currentColor;width:100%;text-align:center;padding:0 8px 3px}
+.recip-frac .den{padding-top:4px}
+@media (max-width:620px){
+  .mode-picker{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Trainer Potenzgesetze</h1>
+  <div class="subtitle">Wähle einen Trainingsbereich.</div>
+
+  <div class="card">
+    <div class="mode-picker">
+      <button class="mode-btn active" id="chooseBase">
+        <b>Potenzen mit gleicher Basis</b>
+        <span>Exponenten bestimmen und Potenzen vereinfachen</span>
+      </button>
+      <button class="mode-btn" id="chooseExp">
+        <b>Potenzen mit gleichem Exponenten</b>
+        <span>Geschickt zusammenfassen und im Kopf ausrechnen</span>
+      </button>
+      <button class="mode-btn" id="chooseRat">
+        <b>Rationale Exponenten</b>
+        <span>Bruchpotenzen ↔ Wurzeln umformen und berechnen</span>
+      </button>
+      <button class="mode-btn" id="chooseRoot">
+        <b>Wurzelgesetze anwenden</b>
+        <span>Produkte und Quotienten mit Wurzeln geschickt berechnen</span>
+      </button>
+    </div>
+
+    <div class="controls">
+      <label>
+        <span class="label">Schwierigkeit</span><br>
+        <select id="level"></select>
+      </label>
+      <label>
+        <span class="label">Aufgabentyp</span><br>
+        <select id="mode"></select>
+      </label>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><span class="label">Aufgaben</span><b id="count">1</b></div>
+      <div class="stat"><span class="label">Richtig</span><b id="score">0</b></div>
+      <div class="stat"><span class="label">Prozent richtig</span><b id="percent">0 %</b></div>
+    </div>
+
+    <div id="taskLabel" class="task-label"></div>
+    <div id="task" class="task"></div>
+
+    <div id="answerLabel" class="task-label">Ergebnis eingeben:</div>
+    <div class="answer-row" id="standardAnswerRow">
+      <input id="answer" type="text" inputmode="text" autocomplete="off" placeholder="Ergebnis">
+    </div>
+    <div id="rootAnswerRow" class="root-answer hidden"></div>
+
+    <div class="keypad" aria-label="Zahlentasten">
+      <button type="button" data-key="1">1</button>
+      <button type="button" data-key="2">2</button>
+      <button type="button" data-key="3">3</button>
+      <button type="button" data-key="4">4</button>
+      <button type="button" data-key="5">5</button>
+      <button type="button" data-key="6">6</button>
+      <button type="button" data-key="7">7</button>
+      <button type="button" data-key="8">8</button>
+      <button type="button" data-key="9">9</button>
+      <button type="button" data-action="minus">−</button>
+      <button type="button" data-key="0">0</button>
+      <button type="button" data-action="back">⌫</button>
+      <button type="button" data-action="fraction" style="grid-column:1 / -1" aria-label="Bruch eingeben"><span style="display:inline-flex;flex-direction:column;line-height:.75;vertical-align:middle"><span style="border-bottom:2px solid currentColor;padding:0 8px 3px">a</span><span style="padding-top:3px">b</span></span>&nbsp; Bruch</button>
+    </div>
+
+    <div class="answer-row" style="margin-top:12px">
+      <button id="check" class="primary">Prüfen</button>
+      <button id="next" class="secondary">Neue Aufgabe</button>
+    </div>
+
+    <div id="feedback"></div>
+  </div>
+  <div class="footer">Bei einer richtigen Lösung kommt nach einer Sekunde automatisch die nächste Aufgabe.</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let trainer = "base";
+let score = 0, streak = 0, count = 1, solved = false, current = null;
+
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function choice(arr){return arr[rand(0,arr.length-1)];}
+function nonZero(min,max){let n=0;while(n===0)n=rand(min,max);return n;}
+function sup(n){return `<sup>${n}</sup>`;}
+function xp(n){return `x${sup(n)}`;}
+
+function configureMenus(){
+  const level = $("level"), mode = $("mode");
+  if(trainer==="base"){
+    level.innerHTML = `<option value="1">Stufe 1 – Grundlagen</option><option value="2">Stufe 2 – Gemischt</option><option value="3">Stufe 3 – Profi</option>`;
+    mode.innerHTML = `<option value="mix">Alles gemischt</option><option value="mul">Multiplizieren</option><option value="div">Dividieren</option><option value="pow">Potenzieren</option><option value="combo">Kombinieren</option>`;
+    $("taskLabel").textContent="Vereinfache den Term zu einer Potenz von x:";
+    $("answerLabel").textContent="Gib nur den Exponenten ein:";
+  } else if(trainer==="exp") {
+    level.innerHTML = `<option value="1">Stufe 1 – leichtes Kopfrechnen</option><option value="2">Stufe 2 – mit negativen Zahlen</option><option value="3">Stufe 3 – gemischt</option>`;
+    mode.innerHTML = `<option value="mix">Alles gemischt</option><option value="mul">Produkt</option><option value="div">Quotient</option>`;
+    $("taskLabel").textContent="Nutze das Potenzgesetz und berechne geschickt:";
+    $("answerLabel").textContent="Ergebnis eingeben:";
+  } else if(trainer==="rat") {
+    level.innerHTML = `<option value="1">Stufe 1 – positive Bruchpotenzen</option><option value="2">Stufe 2 – auch negative Exponenten</option><option value="3">Stufe 3 – gemischt</option>`;
+    mode.innerHTML = `<option value="mix">Alles gemischt</option><option value="calc">Zahl berechnen</option><option value="toRoot">Potenz → Wurzel (mit x)</option><option value="toPower">Wurzel → Potenz (mit x)</option>`;
+    $("taskLabel").textContent="Potenzen mit rationalem Exponenten:";
+    $("answerLabel").textContent="Ergebnis eingeben:";
+  } else {
+    level.innerHTML = `<option value="1">Stufe 1 – Quadratwurzeln</option><option value="2">Stufe 2 – Quadrat- und Kubikwurzeln</option><option value="3">Stufe 3 – gemischt und anspruchsvoller</option>`;
+    mode.innerHTML = `<option value="mix">Alles gemischt</option><option value="combo">Mehrschrittige Aufgaben</option><option value="mul">Wurzeln multiplizieren</option><option value="div">Wurzeln dividieren</option><option value="cube">Kubikwurzeln</option>`;
+    $("taskLabel").textContent="Wende ein Wurzelgesetz an und berechne:";
+    $("answerLabel").textContent="Ergebnis eingeben:";
+  }
+}
+
+function baseTask(){
+  const level=+$("level").value;
+  const mode=$("mode").value;
+  const r=level===1?{min:1,max:8}:level===2?{min:-6,max:9}:{min:-10,max:12};
+  let type=mode;
+  if(type==="mix") type=choice(level===1?["mul","div","pow"]:["mul","div","pow","combo"]);
+  let a,b,c,expr,ans,steps;
+  if(type==="mul"){
+    a=level===1?rand(1,8):nonZero(r.min,r.max);
+    b=level===1?rand(1,8):nonZero(r.min,r.max);
+    ans=a+b; expr=`${xp(a)} · ${xp(b)}`; steps=`${a} + (${b}) = ${ans}`;
+  } else if(type==="div"){
+    a=level===1?rand(3,10):nonZero(r.min,r.max);
+    b=level===1?rand(1,Math.min(8,a)):nonZero(r.min,r.max);
+    ans=a-b;
+    expr=`<span style="display:inline-block;vertical-align:middle"><span style="display:block;border-bottom:2px solid currentColor;padding:0 8px 4px">${xp(a)}</span><span style="display:block;padding-top:4px">${xp(b)}</span></span>`;
+    steps=`${a} - (${b}) = ${ans}`;
+  } else if(type==="pow"){
+    a=level===1?rand(1,7):nonZero(r.min,r.max);
+    b=level===1?rand(2,5):nonZero(-5,5);
+    ans=a*b; expr=`(${xp(a)})${sup(b)}`; steps=`${a} · (${b}) = ${ans}`;
+  } else {
+    a=nonZero(r.min,r.max); b=nonZero(r.min,r.max); c=nonZero(r.min,r.max);
+    ans=a+b-c;
+    expr=`<span style="display:inline-block;vertical-align:middle"><span style="display:block;border-bottom:2px solid currentColor;padding:0 8px 4px">${xp(a)} · ${xp(b)}</span><span style="display:block;padding-top:4px">${xp(c)}</span></span>`;
+    steps=`${a} + (${b}) - (${c}) = ${ans}`;
+  }
+  return {expr,answer:ans,steps};
+}
+
+function exponentForBase(base,level){
+  const a=Math.abs(base);
+  if(level===1)return choice([2,3]);
+  if(level===2)return a<=5?choice([2,3,4]):choice([2,3]);
+  return a<=4?choice([2,3,4,5]):a<=6?choice([2,3,4]):choice([2,3]);
+}
+
+function expTask(){
+  const level=+$("level").value;
+  let type=$("mode").value;
+  if(type==="mix") type=Math.random()<.5?"mul":"div";
+  const mulPools={
+    1:[[2,5],[5,2],[2,3],[3,2],[4,2],[2,4],[3,3],[4,1],[5,1]],
+    2:[[2,5],[5,2],[2,3],[3,2],[4,2],[2,4],[3,3],[-2,3],[3,-2],[-2,4],[4,-2],[-3,2],[2,-3],[-2,-3],[-4,-2]],
+    3:[[2,5],[5,2],[2,3],[3,2],[4,2],[2,4],[3,3],[-2,3],[3,-2],[-2,4],[4,-2],[-3,2],[2,-3],[-2,-3],[-4,-2],[5,-2],[-5,2],[-3,-3],[2,-5]]
+  };
+  const divPools={
+    1:[[8,2],[12,3],[10,2],[15,5],[18,3],[16,4]],
+    2:[[8,2],[12,3],[10,2],[15,5],[18,3],[16,4],[-8,2],[-12,3],[12,-3],[-15,5],[15,-5],[-18,3]],
+    3:[[8,2],[12,3],[10,2],[15,5],[18,3],[16,4],[20,4],[21,3],[-8,2],[-12,3],[12,-3],[-15,5],[15,-5],[-18,3],[-20,4],[20,-4],[-21,3],[21,-3]]
+  };
+  let a,b,base,n,result,expr,compact;
+  if(type==="mul"){
+    do{
+      [a,b]=choice(mulPools[level]); base=a*b; n=exponentForBase(base,level); result=base**n;
+    }while(Math.abs(result)>2500);
+    expr=`(${a})${sup(n)} · (${b})${sup(n)}`;
+    compact=`(${a} · ${b})${sup(n)} = ${base}${sup(n)} = ${result}`;
+  }else{
+    do{
+      [a,b]=choice(divPools[level]); base=a/b; n=exponentForBase(base,level); result=base**n;
+    }while(!Number.isInteger(base)||Math.abs(result)>2500);
+    const fmt=x=>x<0?`(${x})`:`${x}`;
+    expr=`<span style="display:inline-block;vertical-align:middle"><span style="display:block;border-bottom:2px solid currentColor;padding:0 10px 4px">${fmt(a)}${sup(n)}</span><span style="display:block;padding-top:4px">${fmt(b)}${sup(n)}</span></span>`;
+    compact=`(${a} : ${b})${sup(n)} = ${base}${sup(n)} = ${result}`;
+  }
+  return {expr,answer:result,steps:compact};
+}
+
+function fracHTML(a,b){return `<span style="display:inline-block;vertical-align:middle;font-size:.62em;line-height:1"><span style="display:block;border-bottom:1.5px solid currentColor;padding:0 3px 2px">${a}</span><span style="display:block;padding-top:2px">${b}</span></span>`;}
+function rootHTML(n,inside){const idx=n===2?"":`<sup style="font-size:.45em;position:relative;top:.05em;margin-right:-.12em;z-index:3">${n}</sup>`;return `<span style="display:inline-flex;align-items:flex-start;vertical-align:middle">${idx}<span style="font-family:Georgia,Times New Roman,serif;font-size:1.35em;line-height:.8;position:relative;z-index:2;margin-right:-.13em">√</span><span style="border-top:.065em solid currentColor;padding:2px 3px 0 .16em;line-height:1;position:relative;z-index:1">${inside}</span></span>`;}
+function rationalTask(){
+  const level=+$("level").value; let type=$("mode").value;
+  if(type==="mix") type=choice(["calc","toRoot","toPower"]);
+  const neg=level>1 && Math.random()<.42;
+  if(type==="calc"){
+    // Kopfrechenfreundlicher Aufgabenpool: überwiegend einfache Wurzeln,
+    // höhere Zähler nur bei kleinen, überschaubaren Ergebnissen.
+    const easy = [
+      [4,1,2,2],[9,1,2,3],[16,1,2,4],[25,1,2,5],[36,1,2,6],
+      [49,1,2,7],[64,1,2,8],[81,1,2,9],[100,1,2,10],[121,1,2,11],[144,1,2,12],
+      [8,1,3,2],[27,1,3,3],[64,1,3,4],[125,1,3,5],
+      [16,1,4,2],[81,1,4,3]
+    ];
+    const extended = [
+      [8,2,3,4],[27,2,3,9],[9,3,2,27],[16,3,4,8]
+    ];
+    const pool = level===1 ? easy : easy.concat(extended);
+    const [base,m,n,value] = choice(pool);
+    const sign=neg?-1:1, ans=sign<0?1/value:value;
+    return {kind:"number",expr:`${base}${sup(`${sign<0?'−':''}${fracHTML(m,n)}`)}`,answer:ans,displayAnswer:Number.isInteger(ans)?String(ans):`1/${value}`,steps:`${base}${sup(`${sign<0?'−':''}${m}/${n}`)} = ${sign<0?'1 / ':''}${rootHTML(n,base)}${m===1?'':sup(m)} = ${sign<0?`1/${value}`:value}`};
+  }
+  let n,m;
+  do{
+    n=choice(level===1?[2,3]:[2,3,4,5]);
+    m=choice(level===1?[1,2]:[1,2,3,4]);
+  }while(n===m);
+  const sign=neg?-1:1;
+  if(type==="toRoot"){
+    return {kind:"root",expr:`x${sup(`${sign<0?'−':''}${fracHTML(m,n)}`)} <span>= ?</span>`,rootN:n,rootM:m,negative:sign<0,displayAnswer:sign<0?`1 / ${rootHTML(n,`x${m===1?'':sup(m)}`)}`:rootHTML(n,`x${m===1?'':sup(m)}`),steps:`x${sup(`${sign<0?'−':''}${m}/${n}`)} = ${sign<0?'1 / ':''}${rootHTML(n,`x${m===1?'':sup(m)}`)}`};
+  }
+  return {kind:"text",expr:`${sign<0?`<span style="display:inline-block;vertical-align:middle"><span style="display:block;border-bottom:2px solid currentColor;padding:0 8px 4px">1</span><span style="display:block;padding-top:4px">${rootHTML(n,`x${m===1?'':sup(m)}`)}</span></span>`:rootHTML(n,`x${m===1?'':sup(m)}`)} <span>= x<sup>?</sup></span>`,answer:`${sign<0?'-':''}${m}/${n}`,displayAnswer:`${sign<0?'−':''}${m}/${n}`,steps:`${sign<0?'1 / ':''}${rootHTML(n,`x${m===1?'':sup(m)}`)} = x${sup(`${sign<0?'−':''}${fracHTML(m,n)}`)}`};
+}
+
+
+function rootLawTask(){
+  const level=+$('level').value;
+  let type=$('mode').value;
+  // Im gemischten Training nur Aufgaben, deren Ergebnis eine reine Zahl ist.
+  if(type==='mix'){
+    const roll=Math.random();
+    if(level===1) type=roll<.53?'combo':roll<.78?'mul':'div';
+    else type=roll<.46?'combo':roll<.66?'mul':roll<.82?'div':'cube';
+  }
+  const r=(n,x)=>rootHTML(n,x);
+
+  if(type==='combo'){
+    // Mehrschrittige Aufgaben: mehrere Wurzeln, Quotienten und Vorfaktoren.
+    // Die Radikanden lassen sich nicht in einem einzigen offensichtlichen Schritt abarbeiten.
+    const squarePools={
+      1:[
+        [1,6,15,10,3],[1,10,18,5,6],[1,12,10,30,2],[1,14,18,7,6],
+        [2,3,12,4,6],[3,2,8,4,6],[2,5,20,4,10]
+      ],
+      2:[
+        [1,6,15,10,3],[1,10,18,5,6],[1,12,10,30,2],[1,14,18,7,6],
+        [2,6,24,4,12],[3,8,18,4,18],[2,12,27,9,12],[4,5,45,9,20],
+        [3,10,40,4,30],[2,18,8,4,12]
+      ],
+      3:[
+        [1,18,20,10,6],[1,24,30,20,6],[1,28,45,35,6],[1,32,27,24,6],
+        [2,12,75,25,12],[3,18,50,25,18],[4,20,45,20,36],[2,27,48,9,24],
+        [3,24,54,16,27],[5,12,60,20,30]
+      ]
+    };
+    // Eintrag: [Vorfaktor, a, b, c, Ergebnis] für k·√a·√b/√c
+    const [k,a,b,c,ans]=choice(squarePools[level]);
+    const num=`${k===1?'':k+' · '}${r(2,a)} · ${r(2,b)}`;
+    const expr=`<span style="display:inline-block;vertical-align:middle"><span style="display:block;border-bottom:2px solid currentColor;padding:0 8px 4px">${num}</span><span style="display:block;padding-top:4px">${r(2,c)}</span></span>`;
+    const inside=a*b/c;
+    return {kind:'number',expr,answer:ans,
+      steps:`${expr} = ${k===1?'':k+' · '}${r(2,`(${a} · ${b}) / ${c}`)} = ${k===1?'':k+' · '}${r(2,inside)} = ${ans}`};
+  }
+
+  if(type==='cube'){
+    const cubeMul={
+      1:[[2,4],[3,9],[4,16],[5,25]],
+      2:[[2,4],[3,9],[4,16],[5,25],[6,36],[10,100],[12,18],[15,225]],
+      3:[[2,32],[3,72],[4,54],[5,200],[6,36],[9,24],[10,100],[12,144]]
+    };
+    const cubeDiv={
+      1:[[16,2],[24,3],[32,4],[40,5]],
+      2:[[16,2],[24,3],[54,2],[81,3],[128,2],[250,2]],
+      3:[[54,2],[81,3],[128,2],[192,3],[250,2],[375,3],[432,2]]
+    };
+    const isMul=Math.random()<.68;
+    const [a,b]=choice((isMul?cubeMul:cubeDiv)[level]);
+    const value=isMul?a*b:a/b;
+    const ans=Math.round(Math.cbrt(value));
+    if(isMul) return {kind:'number',expr:`${r(3,a)} · ${r(3,b)}`,answer:ans,
+      steps:`${r(3,a)} · ${r(3,b)} = ${r(3,`${a} · ${b}`)} = ${r(3,value)} = ${ans}`};
+    const frac=`<span style="display:inline-block;vertical-align:middle"><span style="display:block;border-bottom:2px solid currentColor;padding:0 8px 4px">${r(3,a)}</span><span style="display:block;padding-top:4px">${r(3,b)}</span></span>`;
+    return {kind:'number',expr:frac,answer:ans,steps:`${frac} = ${r(3,`${a} / ${b}`)} = ${r(3,value)} = ${ans}`};
+  }
+
+  if(type==='mul'){
+    const pools={
+      1:[[2,8],[3,12],[5,20],[8,18],[12,27],[20,5]],
+      2:[[2,18],[3,12],[5,20],[6,24],[7,28],[8,18],[10,40],[12,27],[20,5]],
+      3:[[2,18],[3,27],[5,45],[6,54],[8,32],[10,90],[12,48],[15,60],[20,45]]
+    };
+    const [a,b]=choice(pools[level]);
+    const ans=Math.sqrt(a*b);
+    return {kind:'number',expr:`${r(2,a)} · ${r(2,b)}`,answer:ans,
+      steps:`${r(2,a)} · ${r(2,b)} = ${r(2,`${a} · ${b}`)} = ${r(2,a*b)} = ${ans}`};
+  }
+
+  const pools={
+    1:[[8,2],[12,3],[18,2],[27,3],[20,5]],
+    2:[[18,2],[27,3],[32,2],[45,5],[48,3],[50,2],[75,3]],
+    3:[[72,2],[108,3],[125,5],[147,3],[200,8],[242,2],[300,3]]
+  };
+  const [a,b]=choice(pools[level]);
+  const ans=Math.sqrt(a/b);
+  const frac=`<span style="display:inline-block;vertical-align:middle"><span style="display:block;border-bottom:2px solid currentColor;padding:0 8px 4px">${r(2,a)}</span><span style="display:block;padding-top:4px">${r(2,b)}</span></span>`;
+  return {kind:'number',expr:frac,answer:ans,
+    steps:`${frac} = ${r(2,`${a} / ${b}`)} = ${r(2,a/b)} = ${ans}`};
+}
+
+function newTask(){
+  current=trainer==="base"?baseTask():trainer==="exp"?expTask():trainer==="rat"?rationalTask():rootLawTask();
+  solved=false;
+  $("task").innerHTML=trainer==="base" ? `${current.expr} <span>= x<sup>?</sup></span>` : trainer==="exp" ? `${current.expr} <span>= ?</span>` : current.expr;
+  $("answer").value="";
+  $("answer").disabled=false;
+  $("standardAnswerRow").classList.toggle("hidden", current.kind==="root");
+  $("rootAnswerRow").classList.toggle("hidden", current.kind!=="root");
+  if(current.kind==="root"){
+    const radical=`<span class="root-wrap"><input id="rootIndex" class="root-index-input" type="text" inputmode="none" readonly aria-label="Wurzelexponent"><span class="root-symbol">√</span><span class="radicand"><span class="x-symbol">x</span><input id="xExponent" class="x-exp-input" type="text" inputmode="none" readonly aria-label="Exponent an x"></span></span>`;
+    $("rootAnswerRow").innerHTML=current.negative ? `<span class="recip-frac"><span class="num">1</span><span class="den">${radical}</span></span>` : radical;
+    window.activeAnswerInput=$("rootIndex");
+    [$("rootIndex"),$("xExponent")].forEach(el=>el.addEventListener("focus",()=>window.activeAnswerInput=el));
+  }else{
+    $("rootAnswerRow").innerHTML=""; window.activeAnswerInput=$("answer");
+  }
+  $("check").disabled=false;
+  $("feedback").innerHTML="";
+  $("count").textContent=count;
+}
+
+function check(){
+  if(solved){next();return;}
+  const raw=$("answer").value.trim();
+  if(current.kind==="root"){
+    const ri=$("rootIndex").value.trim(), xe=$("xExponent").value.trim();
+    if(!ri || (!xe && current.rootM!==1)){$("feedback").innerHTML=current.rootM===1?'<span class="bad">Bitte ergänze den Wurzelexponenten.</span>':'<span class="bad">Bitte ergänze Wurzelexponent und Exponent an x.</span>';return;}
+  }else if(raw===""||raw==="-"){
+    $("feedback").innerHTML='<span class="bad">Bitte gib eine Zahl ein.</span>';
+    return;
+  }
+  let ok=false;
+  if(trainer==="rat"){
+    const norm=raw.toLowerCase().replace(/\s+/g,"").replace(/−/g,"-").replace(/√/g,"root");
+    if(current.kind==="root"){
+      const xe=$("xExponent").value.trim();
+      ok=Number($("rootIndex").value)===current.rootN && ((current.rootM===1 && xe==="") || Number(xe)===current.rootM);
+    }else if(current.kind==="number"){
+      let val=Number(raw.replace(",","."));
+      if(raw.includes("/")){const [a,b]=raw.split("/").map(Number);val=a/b;}
+      ok=Math.abs(val-current.answer)<1e-10;
+    }else {
+      // Rationale Exponenten mathematisch vergleichen: gekürzte Brüche und Dezimalzahlen sind gleichwertig.
+      const parseRational = value => {
+        const t=String(value).trim().replace(/−/g,"-").replace(",",".");
+        if(t.includes("/")){
+          const parts=t.split("/");
+          if(parts.length!==2) return NaN;
+          const a=Number(parts[0]), b=Number(parts[1]);
+          return Number.isFinite(a)&&Number.isFinite(b)&&b!==0 ? a/b : NaN;
+        }
+        return Number(t);
+      };
+      const entered=parseRational(raw), expected=parseRational(current.answer);
+      ok=Number.isFinite(entered) && Number.isFinite(expected) && Math.abs(entered-expected)<1e-10;
+    }
+  }else ok=Number(raw)===current.answer;
+  if(ok){
+    solved=true;
+    $("answer").disabled=true;
+    if($("rootIndex")) $("rootIndex").disabled=true;
+    if($("xExponent")) $("xExponent").disabled=true;
+    $("check").disabled=true;
+    score++; streak++;
+    $("score").textContent=score;
+    $("percent").textContent=`${Math.round(score/count*100)} %`;
+    $("task").innerHTML=trainer==="base" ? `${current.expr} <span>= x<sup>${current.answer}</sup></span>` : trainer==="exp" ? `${current.expr} <span>= ${current.answer}</span>` : `${current.expr} <span class="good">✓</span>`;
+    $("feedback").innerHTML=`<span class="good">✓ Richtig!</span><br><span class="label">${current.steps}</span>`;
+    setTimeout(()=>{if(solved)next();},1000);
+  }else{
+    streak=0;
+    $("feedback").innerHTML='<span class="bad">✗ Noch nicht richtig – versuche es noch einmal.</span>';
+    $("answer").value="";
+  }
+}
+function next(){count++;newTask();}
+function reset(){
+  score=0;streak=0;count=1;
+  $("score").textContent=0;$("percent").textContent="0 %";
+  configureMenus();newTask();
+}
+function selectTrainer(which){
+  trainer=which;
+  $("chooseBase").classList.toggle("active",which==="base");
+  $("chooseExp").classList.toggle("active",which==="exp");
+  $("chooseRat").classList.toggle("active",which==="rat");
+  $("chooseRoot").classList.toggle("active",which==="root");
+  reset();
+}
+
+document.querySelectorAll(".keypad button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    if(solved)return;
+    const target=window.activeAnswerInput || $("answer");
+    let v=target.value;
+    const key=btn.dataset.key,action=btn.dataset.action;
+    if(key!==undefined){
+      if(v==="0")v="";
+      if(v==="-0")v="-";
+      target.value=v+key;
+      if(current && current.kind==="root" && target.id==="rootIndex" && target.value.length>=1){window.activeAnswerInput=$("xExponent"); $("xExponent").focus();}
+    }else if(action==="minus"){
+      if(current && current.kind==="root") return;
+      target.value=v.startsWith("-")?v.slice(1):"-"+v;
+    }else if(action==="fraction"){
+      if(current && current.kind==="root") return;
+      if(!v.includes("/")){
+        target.value=(v===""||v==="-") ? v+"1/" : v+"/";
+      }
+      target.focus();
+    }else if(action==="back"){
+      target.value=v.slice(0,-1);
+    }
+  });
+});
+
+$("check").addEventListener("click",check);
+$("next").addEventListener("click",next);
+$("level").addEventListener("change",()=>{score=0;streak=0;count=1;$("score").textContent=0;$("percent").textContent="0 %";newTask();});
+$("mode").addEventListener("change",()=>{score=0;streak=0;count=1;$("score").textContent=0;$("percent").textContent="0 %";newTask();});
+$("chooseBase").addEventListener("click",()=>selectTrainer("base"));
+$("chooseExp").addEventListener("click",()=>selectTrainer("exp"));
+$("chooseRat").addEventListener("click",()=>selectTrainer("rat"));
+$("chooseRoot").addEventListener("click",()=>selectTrainer("root"));
+
+configureMenus();
+newTask();
+</script>
+</body>
+</html>
